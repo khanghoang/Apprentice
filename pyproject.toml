@@ -1,0 +1,19 @@
+[project]
+name = "apprentice"
+version = "0.1.0"
+description = "MCP server that delegates scoped coding subtasks to cheap/fast models via a litellm proxy, drafting in an isolated git worktree."
+requires-python = ">=3.11"
+dependencies = [
+    "mcp[cli]",
+    "requests",
+]
+
+[project.scripts]
+apprentice-mcp = "apprentice.server:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["apprentice"]
