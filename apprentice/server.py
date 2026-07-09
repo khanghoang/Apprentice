@@ -37,6 +37,7 @@ def _master_key() -> str:
 def delegate_code_task(
     task: str,
     file_paths: list[str],
+    repo_root: str,
     context: str = "",
     model: str = "claude-cloud-fast",
 ) -> str:
@@ -56,6 +57,12 @@ def delegate_code_task(
             that don't exist yet are created. Keep this list to files that
             are genuinely part of THIS change — a task touching unrelated
             files can't safely run in parallel with siblings that share them.
+        repo_root: Absolute path to (or inside) the target git repository.
+            This server runs as one long-lived process that may be used
+            across many different projects in a session — always pass the
+            actual project directory explicitly; there is no cwd fallback,
+            since silently operating on the wrong repo is a worse failure
+            mode than a required argument.
         context: Optional extra context not already present in the listed
             files (a type signature from elsewhere, a convention to follow).
         model: Which backing model to use — one of the model_list entries in
@@ -67,7 +74,8 @@ def delegate_code_task(
         A unified diff of exactly what this task changed, already applied to
         your working tree. Review it; call revert_files if it's wrong.
     """
-    repo_root = worktree.find_git_root(Path.cwd())
+    repo_root_path = Path(repo_root).expanduser().resolve()
+    repo_root = worktree.find_git_root(repo_root_path)
     wt = worktree.create_worktree(repo_root)
     try:
         current_contents: dict[str, str | None] = {}
@@ -100,13 +108,20 @@ def delegate_code_task(
 
 
 @mcp.tool()
-def revert_files(file_paths: list[str]) -> str:
+def revert_files(file_paths: list[str], repo_root: str) -> str:
     """Undo an applied delegate_code_task change on the given files, restoring
     them to their last-committed (HEAD) state, or deleting them if the task
     created them from scratch.
+
+    Args:
+        file_paths: Files to revert.
+        repo_root: Absolute path to (or inside) the target git repository —
+            same requirement as delegate_code_task's repo_root; always pass
+            it explicitly, no cwd fallback.
     """
-    repo_root = worktree.find_git_root(Path.cwd())
-    worktree.revert_files(repo_root, file_paths)
+    repo_root_path = Path(repo_root).expanduser().resolve()
+    resolved_root = worktree.find_git_root(repo_root_path)
+    worktree.revert_files(resolved_root, file_paths)
     return f"Reverted: {', '.join(file_paths)}"
 
 

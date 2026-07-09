@@ -77,20 +77,21 @@ claude mcp list
 
 ## Tools
 
-### `delegate_code_task(task, file_paths, context="", model="claude-cloud-fast")`
+### `delegate_code_task(task, file_paths, repo_root, context="", model="claude-cloud-fast")`
 
 Delegates a scoped coding change to a worker model.
 
 - **`task`** — precise description of the change. The more specific (signatures, expected behavior, edge cases), the better a small model does.
 - **`file_paths`** — every file the task should read and/or write. Files that don't exist yet are created. Keep this to files that are actually part of the change — tasks meant to run in parallel shouldn't share files.
+- **`repo_root`** — absolute path to (or inside) the target git repository. **Required, no cwd fallback.** This server runs as one long-lived process for the whole Claude Code session, spawned once wherever the session happened to start — it may be used across several different projects in that session, so relying on the server's own working directory would silently target the wrong repo the moment you use it on a second project. Always pass the actual project path.
 - **`context`** — optional extra context not already present in the listed files.
 - **`model`** — which backing model to use, matching a `model_list` entry in your proxy config.
 
 Returns a unified diff of what changed, already applied to your working tree.
 
-### `revert_files(file_paths)`
+### `revert_files(file_paths, repo_root)`
 
-Restores the given files to their last-committed state, or deletes them if a task created them from scratch. No model call involved.
+Restores the given files to their last-committed state, or deletes them if a task created them from scratch. No model call involved. `repo_root` has the same explicit-required requirement as above.
 
 ## Design notes
 
