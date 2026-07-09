@@ -108,7 +108,15 @@ def generate_files(
 
     result = parsed.get("files")
     if not isinstance(result, dict):
-        raise WorkerError(f"model output missing top-level 'files' object: {parsed}")
+        # Some models skip the {"files": {...}} wrapper and return the path
+        # -> content mapping directly at the top level despite instructions.
+        # Accept that shape too, but only when every top-level key is one of
+        # the files actually requested — otherwise this would silently treat
+        # some other malformed structure as a valid files mapping.
+        if parsed and all(k in files for k in parsed):
+            result = parsed
+        else:
+            raise WorkerError(f"model output missing top-level 'files' object: {parsed}")
 
     missing = [p for p in files if p not in result]
     if missing:
